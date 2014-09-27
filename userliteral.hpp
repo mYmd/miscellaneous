@@ -1,3 +1,6 @@
+//userliteral header
+//Copyright (c) 2014 mmYYmmdd
+
 #if !defined MMYYMMDD_USER_LITERAL_INCLUDED
 #define MMYYMMDD_USER_LITERAL_INCLUDED
 
