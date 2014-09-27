@@ -1,0 +1,156 @@
+//index_sequence header
+//Copyright (c) 2014 mmYYmmdd
+
+#if !defined MMYYMMDD_INDEX_SEQUENCE_INCLUDED
+#define MMYYMMDD_INDEX_SEQUENCE_INCLUDED
+
+namespace mymd	{
+
+	template <std::size_t... indices>
+	struct index_sequence	{
+		static constexpr std::size_t size()	{	return sizeof...(indices);	}
+	};
+
+	//------------------------------------------------
+	template <typename T1, typename T2>	struct index_cat;
+
+	template <std::size_t... indices1, std::size_t... indices2>
+	struct index_cat<index_sequence<indices1...>, index_sequence<indices2...>>	{
+		using type = index_sequence<indices1..., indices2...>;
+	};
+
+	template <std::size_t N, typename T>	struct index_shift;
+
+	template <std::size_t N, std::size_t... indices>
+	struct index_shift<N, index_sequence<indices...>>	{
+		using type = index_sequence<N + indices...>;
+	};
+	//------------------------------------------------------------------------
+
+	namespace detail_index_range_i	{
+		template <std::size_t first, std::size_t len>
+		struct index_range_i		{
+			using type = typename index_shift<first, typename index_range_i<0, len>::type>::type;
+		};
+
+		template <std::size_t len>
+		struct index_range_i<0, len>		{
+			static constexpr std::size_t h = len/2;
+			using type = typename index_cat<typename index_range_i<0, h>::type	,
+									typename index_range_i<h, len-h>::type
+							>::type;
+		};
+
+		template <> struct index_range_i<0, 0>	{ using type = index_sequence<>; };
+		template <> struct index_range_i<0, 1>	{ using type = index_sequence<0>; };
+		template <> struct index_range_i<0, 2>	{ using type = index_sequence<0, 1>; };
+	}
+
+	//+**************************************************************
+	template <std::size_t first, std::size_t last>
+	using index_range = typename detail_index_range_i::index_range_i<first, (first<last)? last - first: 0>::type;
+
+	namespace detail_index_at	{
+		//  get N_th index of a sequence of indexs
+		template <std::size_t , std::size_t >		struct index_at	{	};
+
+		template <typename , std::size_t...>		struct apart_i;
+
+		template <std::size_t... num, std::size_t... indices>
+		struct apart_i<index_sequence<num...>, indices...> : index_at<num, indices>...	{	};
+
+		//  get N_th type of a sequence of types
+		template <std::size_t , typename >	struct type_at	{	};
+
+		template <typename , typename...>	struct apart_t;
+
+		template <std::size_t... num, typename... types>
+		struct apart_t<index_sequence<num...>, types...> : type_at<num, types>...		{	};
+
+		template <std::size_t N>
+		struct acceptor	{
+			template <std::size_t i>
+			static constexpr std::size_t upcast(const index_at<N, i>&)	{	return i;	}
+			template <typename T>
+			static T upcast(const type_at<N, T>&);
+		};
+
+		//  get N_th type of a sequence of types			att<N>(tuple);
+		template <std::size_t , typename>	struct att_imple;
+
+		template <std::size_t N, template <typename...> class tuple_t, typename... T>
+		struct att_imple<N, tuple_t<T...>>    {
+			using type_imple = apart_t<index_range<0, sizeof...(T)>, T...>;
+			typedef decltype(acceptor<N>::upcast(type_imple{}))			type;
+		};
+	}
+
+	//+**************************************************************
+	//  get to N_th index of a sequence of indexs		at<N>(index_sequence);
+	template <std::size_t N, template <std::size_t...> class index_tuple_t, std::size_t... indices>
+	constexpr std::size_t ati(const index_tuple_t<indices...>& )
+	{
+		using type_imple = detail_index_at::apart_i<index_range<0, sizeof...(indices)>, indices...>;
+		return detail_index_at::acceptor<N>::upcast(type_imple{});
+	}
+
+	//template <std::size_t N, template <std::size_t...> class index_tuple_t, std::size_t... indices>
+	//constexpr std::size_t at = ati<N>(index_tuple_t<indices...>{});
+
+	template <std::size_t N, typename T>
+	using att = typename detail_index_at::att_imple<N, T>::type;
+
+}
+
+namespace mymd  {
+    namespace detail_count_template_parameters    {
+        //　取りうるテンプレートパラメータの数を取得する関数 count<T> を実装したい
+        //  例） count<std::is_integral> => 1  ,  count<std::pair> => 2  ,  count<std::tuple> => 999999(とりあえず...)
+        //       count<quote<std::is_base_of>> => 2
+
+        //template <template <typename...F> class>                      エラーになる
+          //  constexpr std::size_t test1() { return sizeof...(F); }    こうは書けない。Fを与えてないからしょうがない。
+        //手で展開するしかないのか・・・
+        template <template <typename> class>
+            constexpr std::size_t test1() { return 1; }
+        template <template <typename, typename> class>
+            constexpr std::size_t test1() { return 2; }
+        template <template <typename, typename, typename> class>
+            constexpr std::size_t test1() { return 3; }
+        template <template <typename, typename, typename, typename> class>
+            constexpr std::size_t test1() { return 4; }
+        template <template <typename, typename, typename, typename, typename> class>
+            constexpr std::size_t test1() { return 5; }
+        template <template <typename, typename, typename, typename, typename, typename> class>
+            constexpr std::size_t test1() { return 6; }
+        // 7個以上のパターンもひたすら定義する（しかし実用的にはここまでで十分のはず・・・？）
+        //----------------------------------------------------------------------------
+          //SFINAE    test2
+        template <template <typename...> class T>
+            constexpr std::size_t test2(decltype(test1<T>()))    { return test1<T>(); }
+        template <template <typename...> class T>
+            constexpr std::size_t test2(...)                     { return 999999; }
+        //---------------------
+        template <typename T>
+            constexpr std::size_t test2(decltype(test1<T::template apply>()))   { return test1<T::template apply>(); }
+        template <typename T>
+            constexpr std::size_t test2(...)                                    { return 999999; }
+        //-------------------------------------------------------------------------------------
+    }
+
+	//関数 count
+    template <template <typename...> class T>
+	constexpr std::size_t	count_template_parameters()
+	{	return detail_count_template_parameters::test2<T>(0);	}
+
+	template <typename T>
+	constexpr std::size_t  count_template_parameters()
+	{	return detail_count_template_parameters::test2<T>(0);	}
+
+	//variable templateに対してはどう書けばいいの？
+    //template <??????????>
+    //constexpr std::size_t    count();
+}
+
+
+#endif
