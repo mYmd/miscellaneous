@@ -189,7 +189,7 @@ namespace mymd  {
 			struct no_cnv  { using type = T; };
         //-----------------------------------------------
 		//  placeholder
-		template <template <typename> class>
+		template <template <typename> class...>
 			struct _X_ { };
 		//-----------------------------------------------
 		template <typename>
@@ -200,20 +200,37 @@ namespace mymd  {
 
 		template <typename T>
 		struct has_type<T, typename voiD_t<typename T::type>::type>
-		{ using type = typename T::type; };
+			{ using type = typename T::type; };
+		//-----------------------------------------------
+		template <template <typename> class...>	struct apply_conv;
+		template <>
+		struct apply_conv<>	{	//  workaround for VC
+			template <typename V>
+			using apply = V;
+		};
+		template <template <typename> class C>
+		struct apply_conv<C>	{
+			template <typename V>
+			using apply = typename has_type<C<V>>::type;
+		};
+		template <template <typename> class first, template <typename> class...tail>
+		struct apply_conv<first, tail...>	{
+			template <typename V>
+			using apply = typename has_type<first<typename apply_conv<tail...>::template apply<V>>>::type;
+		};
 		//-----------------------------------------------
 		template <typename T>
 		struct trap_space {
 			static const bool value = false;
 			template <typename>
-				using conv = T;	//not convert
+			using conv = T;	//not convert
 		};
 
-		template <template <typename> class C>
-		struct trap_space<_X_<C>> {
+		template <template <typename> class...C>
+		struct trap_space<_X_<C...>> {
 			static const bool value = true;
 			template <typename V>
-				using conv = typename has_type<C<V>>::type;	//convert
+			using conv = typename apply_conv<C...>::template apply<V>;	//convert
 		};
 		//-----------------------------------------------
 		template <typename...>	struct types  { };
@@ -227,14 +244,17 @@ namespace mymd  {
 			using base_t = replace_space<types<T2...>, base_v, types<R..., alt_t>>;
 			using type = typename base_t::type;
 		};
+		template <typename V1, typename...V2, typename...R>
+		struct replace_space<types<>, types<V1, V2...>, types<R...>>
+			{ using type = types<R...>; };
 		template <typename...T, typename...R>
 		struct replace_space<types<T...>, types<>, types<R...>>
-		{ using type = types<R...>; };
+			{ using type = types<R..., T...>; };
 		//-----------------------------------------------
 		template <template <typename...> class, typename>	struct m_pack;
 		template <template <typename...> class mata, typename...V>
 		struct m_pack<mata, types<V...>>
-		{ using type = mata<V...>; };
+			{ using type = mata<V...>; };
 
 	}
 
