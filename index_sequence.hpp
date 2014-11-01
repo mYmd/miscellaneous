@@ -44,7 +44,9 @@ namespace mymd  {
 
     template <std::size_t last>
     using make_indEx_sequence = typename detail_index_range_i::index_range_i<0, last>::type;
-    
+}
+
+namespace mymd  {
     namespace detail_index_at   {
         //  get N_th index of a sequence of indexs
         template <std::size_t , std::size_t >       struct index_at {};
