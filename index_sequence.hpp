@@ -129,7 +129,6 @@ namespace mymd  {
     namespace detail_count_template_parameters    {
         //　取りうるテンプレートパラメータの数を取得する関数 count<T> を実装したい
         //  例） count<std::is_integral> => 1  ,  count<std::pair> => 2  ,  count<std::tuple> => (size_t)-1(とりあえず...)
-        //       count<quote<std::is_base_of>> => 2
 
         //template <template <typename...F> class>                      エラーになる
           //  constexpr std::size_t count1() { return sizeof...(F); }    NG! こうは書けない。Fを与えてないからしょうがない。
@@ -150,32 +149,20 @@ namespace mymd  {
             constexpr std::size_t count1() { return 7; }
         // これ以上のパターンもひたすら定義する（しかし実用的にはここまでで十分のはず・・・？）
         //----------------------------------------------------------------------------
-          //SFINAE    count2
+
         template <template <typename...> class T>
-        constexpr std::size_t count2(decltype(count1<T>()))
-        { return count1<T>(); }
+        constexpr std::size_t count2(decltype(count1<T>())) { return count1<T>(); }
+
         template <template <typename...> class T>
-        constexpr std::size_t count2(...)
-        { return (std::size_t)-1; }
-        //---------------------
-        template <typename T>
-        constexpr std::size_t count2(decltype(count1<T::template apply>()))
-        { return count1<T::template apply>(); }
-        template <typename T>
-        constexpr std::size_t count2(...)
-        { return (std::size_t)-1; }
-        //-------------------------------------------------------------------------------------
+        constexpr std::size_t count2(...)                   { return (std::size_t)-1; }
+
     }   //detail_count_template_parameters
     
     //関数 count
     template <template <typename...> class T>
     constexpr std::size_t	count_template_parameters()
-    { return detail_count_template_parameters::count2<T>(0); }
-    
-    template <typename T>
-    constexpr std::size_t  count_template_parameters()
-    { return detail_count_template_parameters::count2<T>(0); }
-    
+        { return detail_count_template_parameters::count2<T>(0); }
+
     //variable templateに対してはどう書けばいいの？
     //template <??????????>
     //constexpr std::size_t    count();
