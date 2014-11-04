@@ -8,9 +8,14 @@
 #include <utility>
 
 namespace mymd  {
-    template <std::size_t... indices>
-    struct indEx_sequence
-    { static constexpr std::size_t size()   { return sizeof...(indices); } };
+    template <typename T, T...values>
+    struct integEr_sequence  {
+        using value_type = T;
+        static constexpr std::size_t size() { return sizeof...(values); }
+    };
+
+    template<std::size_t...indices>
+    using indEx_sequence = integEr_sequence<std::size_t, indices...>;
     //------------------------------------------------
     template <typename T1, typename T2>	struct index_cat;
 
@@ -48,26 +53,16 @@ namespace mymd  {
 
 namespace mymd  {
     namespace detail_index_at   {
-        //  get N_th index of a sequence of indexs
-        template <std::size_t , int N>     struct value_at { static constexpr int value = N; };
-        
-        template <typename , int...>       struct pair_v;
-        
-        template <std::size_t... num, int... values>
-        struct pair_v<indEx_sequence<num...>, values...>   :   value_at<num, values>... {};
         
         //  get N_th type of a sequence of types
         template <std::size_t , typename T> struct type_at	{ using type = T; };
         
         template <typename , typename...>	struct pair_t;
-        
         template <std::size_t... num, typename... types>
         struct pair_t<indEx_sequence<num...>, types...>     :   type_at<num, types>... {};
         
         template <std::size_t N>
         struct acceptor	{
-            template <int i>
-            static constexpr value_at<N, i> upcast(const value_at<N, i>&) { return value_at<N, i>{}; }
             template <typename T>
             static type_at<N, T> upcast(const type_at<N, T>&);
         };
@@ -75,13 +70,14 @@ namespace mymd  {
         //  get N_th index of a sequence of values
         template <std::size_t, typename> struct att_imple;
 
-        template <std::size_t N, template <int...> class value_seq_t, int... values>
-        struct att_imple<N, value_seq_t<values...>>   {
+        template <std::size_t N, typename T, template <typename U, U...> class value_seq_t, T... values>
+        struct att_imple<N, value_seq_t<T, values...>>   {
         private:
-            using type_imple = pair_v<make_indEx_sequence<sizeof...(values)>, values...>;
+            template <T v> struct t_value { static constexpr T value = v; };
+            using type_imple = pair_t<make_indEx_sequence<sizeof...(values)>, t_value<values>...>;
         public:
-            using type = att_imple<N, value_seq_t<values...>>;
-            constexpr static int value = decltype(acceptor<N>::upcast(type_imple{}))::value;
+            using type = att_imple<N, value_seq_t<T, values...>>;
+            constexpr static T value = decltype(acceptor<N>::upcast(type_imple{}))::type::value;
         };
 
         template <std::size_t N, template <typename...> class tuple_t, typename... T>
@@ -90,8 +86,9 @@ namespace mymd  {
             using type_imple = pair_t<make_indEx_sequence<sizeof...(T)>, T...>;
             using type_0    =  decltype(acceptor<N>::upcast(type_imple{}));
         public:
-            using type      =  typename type_0::type;
+            using type = typename type_0::type;
         };
+
         template <std::size_t N>
         struct att_imple<N, void>    {
             using type  =   att_imple<N, void>;
