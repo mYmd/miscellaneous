@@ -76,7 +76,7 @@ namespace mymd  {
             template <T v> struct t_value { static constexpr T value = v; };
             using type_imple = pair_t<make_indEx_sequence<sizeof...(values)>, t_value<values>...>;
         public:
-            using type = att_imple<N, value_seq_t<T, values...>>;
+            using type = T;
             constexpr static T value = decltype(acceptor<N>::upcast(type_imple{}))::type::value;
         };
 
@@ -91,9 +91,8 @@ namespace mymd  {
 
         template <std::size_t N>
         struct att_imple<N, void>    {
-            using type  =   att_imple<N, void>;
             template <typename T>
-            using apply = typename att_imple<N, T>::type;
+            using apply = att_imple<N, T>;
         };
 
     }   //namespace detail_index_at	
@@ -102,12 +101,12 @@ namespace mymd  {
     // get N_th value of a sequence of values  att<N, value_sequence>::value;    att<N>::apply<value_sequence>::value:
     // get N_th type of a sequence of types    att<N, type_sequence>;   att<N>::apply<type_sequence>;
     template <std::size_t N, typename T = void>
-    using att = typename detail_index_at::att_imple<N, T>::type;
+    using att = detail_index_at::att_imple<N, T>;
 
     template <typename T>
     struct tat  {
         template <std::size_t N>
-        using at = typename detail_index_at::att_imple<N, T>::type;
+        using at = detail_index_at::att_imple<N, T>;
     };
 }
 
