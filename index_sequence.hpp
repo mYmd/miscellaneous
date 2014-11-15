@@ -11,7 +11,7 @@ namespace mymd  {
     template <typename T, T...values>
     struct integEr_sequence  {
         using value_type = T;
-        static constexpr std::size_t size() { return sizeof...(values); }
+        static const std::size_t size() { return sizeof...(values); }
     };
 
     template<std::size_t...indices>
@@ -35,7 +35,7 @@ namespace mymd  {
 
         template <std::size_t len>
         struct index_range_i<0, len>		{
-            static constexpr std::size_t h = len/2;
+            static const std::size_t h = len/2;
             using type = typename index_cat<typename index_range_i<0, h>::type, typename index_range_i<h, len-h>::type>::type;
         };
         
@@ -73,11 +73,11 @@ namespace mymd  {
         template <std::size_t N, typename T, template <typename U, U...> class value_seq_t, T... values>
         struct att_imple<N, value_seq_t<T, values...>>   {
         private:
-            template <T v> struct t_value { static constexpr T value = v; };
+            template <T v> struct t_value { static const T value = v; };
             using type_imple = pair_t<make_indEx_sequence<sizeof...(values)>, t_value<values>...>;
         public:
             using type = T;
-            constexpr static T value = decltype(acceptor<N>::upcast(type_imple{}))::type::value;
+            const static T value = decltype(acceptor<N>::upcast(type_imple{}))::type::value;
         };
 
         template <std::size_t N, template <typename...> class tuple_t, typename... T>
@@ -92,21 +92,31 @@ namespace mymd  {
         template <std::size_t N>
         struct att_imple<N, void>    {
             template <typename T>
-            using apply = att_imple<N, T>;
+            using in = att_imple<N, T>;
         };
 
     }   //namespace detail_index_at	
     
     //+**************************************************************
-    // get N_th value of a sequence of values  att<N, value_sequence>::value;    att<N>::apply<value_sequence>::value:
-    // get N_th type of a sequence of types    att<N, type_sequence>;   att<N>::apply<type_sequence>;
-    template <std::size_t N, typename T = void>
-    using att = detail_index_at::att_imple<N, T>;
-
-    template <typename T>
-    struct tat  {
+    // get N_th value of a sequence of values  at_type
+    // at_type::at<N>::in<T>,      at_type::in<T>::at<N>
+    struct at_type  {
         template <std::size_t N>
-        using at = detail_index_at::att_imple<N, T>;
+        struct at   { template <typename T> using in = typename detail_index_at::template att_imple<N, T>::type; };
+        template <typename T>
+        struct in   { template <std::size_t N> using at = typename detail_index_at::template att_imple<N, T>::type; };
+    };
+
+    // convert the type of integer sequence class     from      seq<T...values>;    ---->    Seq<T, T...values>;
+    // from  template <int...values> struct int_sequence;   to  like  template <typename T, T...values> struct Sequence;
+    // sequence_generation<int>::gen<int_sequence>;
+    template <typename T>
+    struct sequence_generation  {
+        template <typename, typename> struct gen_imple;
+        template <typename U, template <U...> class seq, U...values>
+        struct gen_imple<U, seq<values...>> { using type = integEr_sequence<U, values...>; };
+        template <typename W>
+        using gen = typename gen_imple<T, W>::type;
     };
 }
 
@@ -171,6 +181,65 @@ namespace mymd  {
     //variable templateに対してはどう書けばいいの？
     //template <??????????>
     //constexpr std::size_t    count();
+}
+
+namespace mymd  {
+    namespace detail_find    {
+        //a little complicated because of VC++
+                template <typename...>     struct allFalse         { static const bool value = false; };
+                template <typename...T>    struct allFalse<T*...>  { static const bool value = true;  };
+                template <bool...b> struct bool_array     {
+                    static const bool all_0 = allFalse<typename std::conditional<b, int, int*>::type...>::value;
+                };
+                struct set_no_default {};
+                template <bool, typename A>  struct type_pair {};
+                template <typename A> A upcast(type_pair<true, A>&);
+
+        template <template <typename> class Pr, typename default_t = set_no_default>
+        struct find_type_imple     {
+            template <typename... elem>
+            struct apply0   {
+                using b_array = bool_array<Pr<elem>::value...>;
+                static const bool use_default = b_array::all_0 && !std::is_same<default_t, set_no_default>::value;
+                static_assert(!(b_array::all_0 && std::is_same<default_t, set_no_default>::value), "mymd::find_type : no match");
+                template <typename, typename...>  struct D;
+                template <bool...b, typename...T> struct D<bool_array<b...>, T...>
+                    : type_pair<use_default, default_t>, type_pair<b, T>... {};
+                static D<b_array, elem...>& getD();
+                using type = decltype(upcast( getD() ));
+            };
+            //----------------------------------------------
+            template <typename Arr> struct Apply0;
+            template <template <typename...> class Arr, typename... elem>
+            struct Apply0<Arr<elem...>> { using type = typename apply0<elem...>::type; };
+        };
+    }   //namespace detail_find
+    //--------------------------------------------------------------------------------------
+
+    struct find_type    {
+        template <template <typename> class Pr>
+        struct by {
+            template <typename D, typename default_t = detail_find::set_no_default>
+                using from = typename detail_find::find_type_imple<Pr, default_t>::template Apply0<D>::type;
+            template <typename...elem>
+                using in = typename detail_find::find_type_imple<Pr>::template apply0<elem...>::type;
+        };
+        template <typename D, typename default_t = detail_find::set_no_default>
+        struct from  {
+            template <template <typename> class Pr>
+                using by = typename detail_find::find_type_imple<Pr, default_t>::template Apply0<D>::type;
+        };
+        template <typename...elem>
+        struct in  {
+            template <template <typename> class Pr>
+                struct vc_workaround  {
+                    using type = typename detail_find::find_type_imple<Pr>::template apply0<elem...>::type;
+                };
+            template <template <typename> class Pr>
+                using by = typename vc_workaround<Pr>::type;
+        };
+    };
+
 }
 
 #endif
