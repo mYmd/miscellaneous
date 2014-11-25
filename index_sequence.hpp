@@ -263,7 +263,7 @@ namespace mymd  {
 
         template <template <typename I, I...> class index, std::size_t...i>
         struct getTail<index<std::size_t, i...>> {
-            template <size_t> struct void_it { using type = void*; };
+            template <std::size_t> struct void_it { using type = void*; };
             template <typename...W>
             static auto get(typename void_it<i>::type... , pack<W>*...)->type_n<0, W...>;
         };
