@@ -30,7 +30,7 @@ namespace mymd  {
     template <typename T, T...values>
     struct integEr_sequence  {
         using value_type = T;
-        static const std::size_t size() { return sizeof...(values); }
+        static std::size_t size() { return sizeof...(values); }
     };
 
     template<std::size_t...indices>
@@ -281,14 +281,14 @@ namespace mymd  {
 
         template<typename T0, typename...T>
         struct half_half<type_n<1, T0, T...>> {
-            using tail = type_n<0, void>;
+            using tail = type_n<0>;
             using head = type_n<1, T0>;
         };
 
         template<typename...T>
         struct half_half<type_n<0, T...>> {
-            using tail = type_n<0, void>;
-            using head = type_n<0, void>;
+            using tail = type_n<0>;
+            using head = type_n<0>;
         };
 
         template <typename T, bool>   struct type_B {};
@@ -305,7 +305,7 @@ namespace mymd  {
         struct cat<type_n<N, T1...>, type_n<0, T2...>> { using type = type_n<N, T1...>; };
 
         template <typename...T1, typename...T2>
-        struct cat<type_n<0, T1...>, type_n<0, T2...>> { using type = type_n<0, void>; };
+        struct cat<type_n<0, T1...>, type_n<0, T2...>> { using type = type_n<0>; };
 
     }
 }
@@ -337,18 +337,21 @@ namespace mymd  {
 
         template <typename T1, typename...R>
         struct select_by_imple<type_n<1, type_B<T1, false>, R...>> {
-            using type = type_n<0, void>;
+            using type = type_n<0>;
         };
 
         template <typename...R>
         struct select_by_imple<type_n<0, R...>> {
-            using type = type_n<0, void>;
+            using type = type_n<0>;
         };
 
         template <template <typename...> class, typename> struct change_t;
 
         template <template <typename...> class Arr, std::size_t N, typename...T, bool...B>
         struct change_t<Arr, type_n<N, type_B<T, B>...>> { using type = Arr<T...>; };
+
+        template <template <typename...> class Arr>
+        struct change_t<Arr, type_n<0>> { using type = Arr<>; };
 
     }   //detail_select_bb
 
