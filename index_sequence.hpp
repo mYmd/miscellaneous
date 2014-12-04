@@ -81,8 +81,8 @@ namespace mymd  {
         template <std::size_t , typename T> struct type_at	{ using type = T; };
         
         template <typename , typename...>	struct pair_t;
-        template <std::size_t... num, typename... types>
-        struct pair_t<indEx_sequence<num...>, types...>     :   type_at<num, types>... {};
+        template <template <typename I, I...> class index, std::size_t...i, typename...types>
+        struct pair_t<index<std::size_t, i...>, types...>  :  type_at<i, types>...  { };
         
         template <std::size_t N>
         struct upcast {
@@ -91,45 +91,49 @@ namespace mymd  {
         };
         
         //  get N_th index of a sequence of values
-        template <std::size_t, typename> struct att_imple;
+        template <typename> struct att_imple;
 
-        template <std::size_t N, typename T, template <typename U, U...> class value_seq_t, T... values>
-        struct att_imple<N, value_seq_t<T, values...>>   {
+        template <typename T, template <typename U, U...> class value_seq_t, T... values>
+        struct att_imple<value_seq_t<T, values...>>   {
         private:
             template <T v> struct t_value { static const T value = v; };
             using type_imple = pair_t<mymd::make_indEx_sequence<sizeof...(values)>, t_value<values>...>;
             //using type_imple = pair_t<std::make_index_sequence<sizeof...(values)>, t_value<values>...>;
         public:
-            using type = T;
-            const static T value = decltype(upcast<N>::cast(type_imple{}))::type::value;
+            template<std::size_t N>
+            struct at   {
+                using type = T;
+                const static T value = decltype(upcast<N>::cast(type_imple{}))::type::value;
+            };
         };
 
-        template <std::size_t N, template <typename...> class tuple_t, typename... T>
-        struct att_imple<N, tuple_t<T...>>    {
+        template <template <typename...> class tuple_t, typename...T>
+        struct att_imple<tuple_t<T...>>    {
         private:
             using type_imple = pair_t<mymd::make_indEx_sequence<sizeof...(T)>, T...>;
             //using type_imple = pair_t<std::make_index_sequence<sizeof...(T)>, T...>;
-            using type_0    =  decltype(upcast<N>::cast(type_imple{}));
+            template <std::size_t N>
+            struct at_   {
+                using type0 = decltype(upcast<N>::cast(type_imple{}));
+                using type = typename type0::type;
+            };
         public:
-            using type = typename type_0::type;
-        };
-
-        template <std::size_t N>
-        struct att_imple<N, void>    {
-            template <typename T>
-            using in = att_imple<N, T>;
+            template <std::size_t N>
+            using at = typename at_<N>::type;
         };
 
     }   //namespace detail_index_at	
     
     //+**************************************************************
     // get N_th value of a sequence of values  at_type
-    // at_type::at<N>::in<T>,      at_type::in<T>::at<N>
+    // at_type::in<T>::at<N>    ,      at_type::at<N>::in<T>
     struct at_type  {
-        template <std::size_t N>
-        struct at   { template <typename T> using in = typename detail_index_at::template att_imple<N, T>::type; };
         template <typename T>
-        struct in   { template <std::size_t N> using at = typename detail_index_at::template att_imple<N, T>::type; };
+        using in = detail_index_at::att_imple<T>;
+        template <std::size_t N>
+        struct at   {
+            template <typename T> using in = typename detail_index_at::template att_imple<T>::template at<N>;
+        };
     };
 }
 
@@ -246,112 +250,48 @@ namespace mymd  {
 }
 
 //******************************************************************************
-//  half_half   /  class template /  separate a sequence in two(head and tail)
-//  (head is not actual the first half)
-//      (depends on make_indEx_sequence)
-//******************************************************************************
-namespace mymd  {
-    namespace detail_half_half    {
-        template <typename> struct pack {};
-
-        template <std::size_t N, typename...T> struct type_n {
-            static const std::size_t len = N;   // != sizeof...(T)
-            template <std::size_t NN>    using renumber = type_n<NN, T...>;
-        };
-
-        template <typename> struct getTail;
-
-        template <template <typename I, I...> class index, std::size_t...i>
-        struct getTail<index<std::size_t, i...>> {
-            template <std::size_t> struct void_it { using type = void*; };
-            template <typename...W>
-            static auto get(typename void_it<i>::type... , pack<W>*...)->type_n<0, W...>;
-        };
-
-        template<typename> struct half_half;
-
-        template<std::size_t N, typename...T>
-        struct half_half<type_n<N, T...>> {
-            using I = mymd::make_indEx_sequence<N/2>;
-            //using I = std::make_index_sequence<N/2>;
-            using tail_0 = decltype(getTail<I>::get( (pack<T>*)(0)... )   );
-            using tail = typename tail_0::template renumber<N - N/2>;
-            using head = type_n<N - tail::len, T...>;
-        };
-
-        template<typename T0, typename...T>
-        struct half_half<type_n<1, T0, T...>> {
-            using tail = type_n<0>;
-            using head = type_n<1, T0>;
-        };
-
-        template<typename...T>
-        struct half_half<type_n<0, T...>> {
-            using tail = type_n<0>;
-            using head = type_n<0>;
-        };
-
-        template <typename T, bool>   struct type_B {};
-
-        template <typename, typename> struct cat;
-
-        template <std::size_t N1, typename...T1, std::size_t N2, typename...T2>
-        struct cat<type_n<N1, T1...>, type_n<N2, T2...>> { using type = type_n<N1 + N2, T1..., T2...>; };
-
-        template <std::size_t N, typename...T1, typename...T2>
-        struct cat<type_n<0, T1...>, type_n<N, T2...>> { using type = type_n<N, T2...>; };
-
-        template <std::size_t N, typename...T1, typename...T2>
-        struct cat<type_n<N, T1...>, type_n<0, T2...>> { using type = type_n<N, T1...>; };
-
-        template <typename...T1, typename...T2>
-        struct cat<type_n<0, T1...>, type_n<0, T2...>> { using type = type_n<0>; };
-
-    }
-}
-
-//******************************************************************************
 //  select_by_bool   /  class template /  select elements by boolean array
 //      (depends on make_indEx_sequence)
 //******************************************************************************
 namespace mymd  {
     namespace detail_select_bb    {
-        using namespace detail_half_half;
 
-        template <typename T, typename = void>  struct select_by_imple;
+        template <typename...T> struct type_n {};
 
-        template <std::size_t N, typename...T, bool...B>
-        struct select_by_imple<type_n<N, type_B<T, B>...>, typename std::enable_if<(2<=N)>::type> {
-            using seq = type_n<N, type_B<T, B>...>;
-            using head_0 = select_by_imple<typename half_half<seq>::head>;
-            using tail_0 = select_by_imple<typename half_half<seq>::tail>;
-            using head = typename head_0::type;
-            using tail = typename tail_0::type;
+        template <typename T, bool b>
+        struct type_B {
+            using type = T;
+            static const bool value = b;
+        };
+
+        template <typename, typename> struct cat;
+        template <typename...T1, typename...T2>
+        struct cat<type_n<T1...>, type_n<T2...>> { using type = type_n<T1..., T2...>; };
+
+        template <std::size_t, std::size_t, typename> struct select_by_imple;
+
+        template <std::size_t N, std::size_t S, typename W>
+        struct select_by_imple  {
+            using head = typename select_by_imple<N/2, S, W>::type;
+            using tail = typename select_by_imple<N-N/2, S+N/2, W>::type;
             using type = typename cat<head, tail>::type;
         };
 
-        template <typename T1, typename...R>
-        struct select_by_imple<type_n<1, type_B<T1, true>, R...>> {
-            using type = type_n<1, type_B<T1, true>>;
+        template <std::size_t S, typename W>
+        struct select_by_imple<1, S, W> {
+            using at = typename W::template at<S>;
+            using type = typename std::conditional<at::value, type_n<typename at::type>, type_n<>>::type;
         };
 
-        template <typename T1, typename...R>
-        struct select_by_imple<type_n<1, type_B<T1, false>, R...>> {
-            using type = type_n<0>;
-        };
-
-        template <typename...R>
-        struct select_by_imple<type_n<0, R...>> {
-            using type = type_n<0>;
+        template <std::size_t S, typename W>
+        struct select_by_imple<0, S, W> {
+            using type = type_n<>;
         };
 
         template <template <typename...> class, typename> struct change_t;
 
-        template <template <typename...> class Arr, std::size_t N, typename...T, bool...B>
-        struct change_t<Arr, type_n<N, type_B<T, B>...>> { using type = Arr<T...>; };
-
-        template <template <typename...> class Arr>
-        struct change_t<Arr, type_n<0>> { using type = Arr<>; };
+        template <template <typename...> class Arr, typename...T>
+        struct change_t<Arr, type_n<T...>> { using type = Arr<T...>; };
 
     }   //detail_select_bb
 
@@ -361,9 +301,11 @@ namespace mymd  {
     template <template <typename...> class Arr, typename...T, template <bool...> class bool_arr, bool...B>
     class select_by_bool<Arr<T...>, bool_arr<B...>> {
         using type0 = 
-            typename detail_select_bb::select_by_imple<
-                        detail_half_half::type_n<sizeof...(T), detail_half_half::type_B<T, B>...>
+            typename detail_select_bb::select_by_imple<sizeof...(T), 0,
+                        at_type::in<detail_select_bb::type_n<detail_select_bb::type_B<T, B>...>>
                      >::type;
+
+        //using at = at_type::in<type_n<type_B<T, B>...>>::at<S>;
     public:
         using type = typename detail_select_bb::change_t<Arr, type0>::type;
     };
@@ -432,47 +374,32 @@ namespace mymd  {
 //*****************************************************************************
 namespace mymd  {
     namespace detail_reverse    {
-        using namespace detail_half_half;
 
-        template <typename T, typename = void>  struct reserve_imple;
-
-        template <std::size_t N, typename...T>
-        struct reserve_imple<type_n<N, T...>, typename std::enable_if<(3<=N)>::type> {
-            using seq = type_n<N, T...>;
-            using head_0 = reserve_imple<typename half_half<seq>::head>;
-            using tail_0 = reserve_imple<typename half_half<seq>::tail>;
-            using head = typename head_0::type;
-            using tail = typename tail_0::type;
-            using type = typename cat<tail, head>::type;
+        template <std::size_t, typename, typename, template <typename...> class> struct rev_seq;
+        template <  std::size_t N,
+                    template <typename I, I...> class index, std::size_t...i,
+                    typename W,
+                    template <typename...> class Arr    >
+        struct rev_seq<N, index<std::size_t, i...>, W, Arr>     {
+            template <std::size_t k>
+                struct workaround { using type0 = typename W::template at<N-k>; };
+            using type = Arr<typename workaround<i>::type0...>;
         };
 
-        template <typename T, typename U, typename...R>
-        struct reserve_imple<type_n<2, T, U, R...>> {
-            using type = type_n<2, U, T>;
-        };
-
-        template <typename T, typename...R>
-        struct reserve_imple<type_n<1, T, R...>> {
-            using type = type_n<1, T>;
-        };
-
-        template <template <typename...> class, typename> struct change_t;
-
-        template <template <typename...> class Arr, std::size_t N, typename...T>
-        struct change_t<Arr, type_n<N, T...>> { using type = Arr<T...>; };
-        
-        template <typename> struct reverse_t_imple;
-        
+        template <typename T>  struct reverse_imple;
         template <template <typename...> class Arr, typename...T>
-        struct reverse_t_imple<Arr<T...>>  {
-            using type0 = typename reserve_imple<type_n<sizeof...(T), T...>>::type;
-            using type = typename change_t<Arr, type0>::type;
+        struct reverse_imple<Arr<T...>>  {
+            static const std::size_t N = sizeof...(T);
+            using seq = mymd::make_indEx_sequence<N>;
+            //using seq = std::make_index_sequence<N>;
+            using W = at_type::in<Arr<T...>>;
+            using type = typename rev_seq<N-1, seq, W, Arr>::type;
         };
 
     }
     // reverse the order of some tuple type  --  tupleなどの型の集合を逆順にする
     template <typename T>
-    using reverse_t = typename detail_reverse::template reverse_t_imple<T>::type;
+    using reverse_t = typename detail_reverse::template reverse_imple<T>::type;
 }
 
 #endif
