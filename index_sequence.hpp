@@ -71,7 +71,7 @@ namespace mymd  {
 }
 
 //**************************************************************************
-//   at_type    /    clas    /    get N_th value of a sequence of values
+//   at_type    /    class    /    get N_th type of a sequence of types
 //      (depends on make_indEx_sequence)
 //**************************************************************************
 namespace mymd  {
@@ -125,7 +125,7 @@ namespace mymd  {
     }   //namespace detail_index_at	
     
     //+**************************************************************
-    // get N_th value of a sequence of values  at_type
+    // get N_th type of a sequence of types  at_type
     // at_type::in<T>::at<N>    ,      at_type::at<N>::in<T>
     struct at_type  {
         template <typename T>
@@ -323,13 +323,13 @@ namespace mymd  {
             struct make_b<Ar<T...>, Pr> { using type = bool_array<Pr<T>::value...>; };
     }
 
+    //  type_if::select<bool...>::from<Range>;
+    //  type_if::Select<Arr<bool...>>::from<Range>;
+    //  type_if::by<pred>::from<Range>;
+    //  type_if::from<Range>::by<pred>;
+    //  type_if::from<Range>::select<bool...>;
+    //  type_if::from<Range>::Select<Arr<bool...>>;
     struct type_if    {
-        //  select<bool...>::from<Range>;
-        //  Select<Arr<bool...>>::from<Range>;
-        //  by<pred>::from<Range>;
-        //  from<Range>::by<pred>;
-        //  from<Range>::select<bool...>;
-        //  from<Range>::Select<Arr<bool...>>;
         template <bool...b>
         class select {
             template <typename> struct from_imple;
