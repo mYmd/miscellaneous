@@ -50,12 +50,12 @@ void test_functor_overload()
     std::cout << "//ふたつのファンクタのシグネチャは同一。それを意識的に選択する。" << std::endl;
     auto m0 = overload<cond<is_Numeric>, cond<is_Numeric>>(Plus{} ) + 
               overload<cond<is_Pointer>, cond<is_Pointer>>(Minus{}) ;
-    auto mm = add_overload<int, int*>(m0, [](auto i, auto* j){return i + *j;});
     int i = 4, j = 5;
     double a = 3.676, b = 8.3212;
-    std::cout << mm(i, j) << std::endl;
-    std::cout << mm(a, b+0.0) << std::endl;
-    std::cout << mm(&i, &j) << std::endl;
-    std::cout << mm(&a, &b) << std::endl;
+    std::cout << m0(i, j) << std::endl;
+    std::cout << m0(a, b+0.0) << std::endl;
+    std::cout << m0(&i, &j) << std::endl;
+    std::cout << m0(&a, &b) << std::endl;
+    auto mm = add_overload<int, int*>(m0, [](auto i, auto* j){return i + *j;});
     std::cout << mm(i, &j) << std::endl;
 }
