@@ -48,14 +48,14 @@ void test_functor_overload()
     std::cout << "// and choice the members to use from them " << std::endl;
     std::cout << "//数値／ポインタに対する計算をオーバーロードする例" << std::endl;
     std::cout << "//ふたつのファンクタのシグネチャは同一。それを意識的に選択する。" << std::endl;
-    auto m0 = overload<cond<is_Numeric>, cond<is_Numeric>>(Plus{} ) + 
-              overload<cond<is_Pointer>, cond<is_Pointer>>(Minus{}) ;
+    auto m0 = overload<is_Numeric, is_Numeric>(Plus{} ) + 
+              overload<is_Pointer, is_Pointer>(Minus{}) ;
     int i = 4, j = 5;
     double a = 3.676, b = 8.3212;
     std::cout << m0(i, j) << std::endl;
     std::cout << m0(a, b+0.0) << std::endl;
     std::cout << m0(&i, &j) << std::endl;
     std::cout << m0(&a, &b) << std::endl;
-    auto mm = add_overload<int, int*>(m0, [](auto i, auto* j){return i + *j;});
-    std::cout << mm(i, &j) << std::endl;
+    auto mm = add_overload<int, int*, double>(m0, [](auto i, auto* j, auto d){return i + *j + d;});
+    std::cout << mm(i, &j, a) << std::endl;
 }
