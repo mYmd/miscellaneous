@@ -1,7 +1,8 @@
-//test_fol.cpp
+//sample of functor_overload header
 //Copyright (c) 2014 mmYYmmdd
 
 #include "functor_overload.hpp"
+#include <iostream>
 
 template <typename T>
     struct is_Numeric   {
@@ -32,18 +33,24 @@ struct Minus {
         { return *a - *b; }
 };
 
-#include <iostream>
+// オーバーロード関数を成長させる
+template <typename... A, typename T, typename U, typename F>
+constexpr auto add_overload(const mymd::overload_t<T, U>& x, F&& fun)
+{
+    return x + mymd::overload<A...>(std::forward<F>(fun));
+}
 
-int main()
+void test_functor_overload()
 {
     using namespace mymd;
-    std::cout << "// sample for overload the calculation of numerics and of pointers" << std::endl;
+    std::cout << "// sample for overload the calculations of numerics and of pointers" << std::endl;
     std::cout << "// sets of signatures of two functors are same,  " << std::endl;
     std::cout << "// and choice the members to use from them " << std::endl;
-    std::cout << "//数値／ポインタに対する計算をオーバーロードする人工的な例" << std::endl;
+    std::cout << "//数値／ポインタに対する計算をオーバーロードする例" << std::endl;
     std::cout << "//ふたつのファンクタのシグネチャは同一。それを意識的に選択する。" << std::endl;
-    auto mm = gen<cond<is_Numeric>, cond<is_Numeric>>(Plus{} ) + 
-              gen<cond<is_Pointer>, cond<is_Pointer>>(Minus{}) ;
+    auto m0 = overload<cond<is_Numeric>, cond<is_Numeric>>(Plus{} ) + 
+              overload<cond<is_Pointer>, cond<is_Pointer>>(Minus{}) ;
+    auto mm = add_overload<int, int*>(m0, [](auto i, auto* j){return i + *j;});
     int i = 4, j = 5;
     double a = 3.676, b = 8.3212;
     std::cout << mm(i, j) << std::endl;
@@ -51,4 +58,3 @@ int main()
     std::cout << mm(&i, &j) << std::endl;
     std::cout << mm(&a, &b) << std::endl;
 }
-
