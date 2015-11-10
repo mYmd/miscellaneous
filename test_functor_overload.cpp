@@ -57,4 +57,5 @@ void test_functor_overload()
     std::cout << mm(a, b+0.0) << std::endl;
     std::cout << mm(&i, &j) << std::endl;
     std::cout << mm(&a, &b) << std::endl;
+    std::cout << mm(i, &j) << std::endl;
 }
