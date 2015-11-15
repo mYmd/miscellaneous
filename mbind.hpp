@@ -19,9 +19,9 @@ namespace mymd  {
         //-----------------------------------------------
         //  placeholder
         template <template <typename> class...convert>
-            struct _X_ {
+            struct _pX_ {
                 template <template <typename> class...a>
-                using append = _X_<convert..., a...>;
+                using append = _pX_<convert..., a...>;
             };
         //-----------------------------------------------
         template <typename>
@@ -58,7 +58,7 @@ namespace mymd  {
             struct if_placeholder            { static const std::size_t value = 0; };
 
         template <template <typename> class...C>
-            struct if_placeholder<_X_<C...>> { static const std::size_t value = 1; };
+            struct if_placeholder<_pX_<C...>> { static const std::size_t value = 1; };
         //-----------------------------------------------
         template <typename...>	struct count_placeholders;
 
@@ -83,7 +83,7 @@ namespace mymd  {
             };
             
         template <template <typename> class...C>
-            struct trap_placeholder<_X_<C...>> {
+            struct trap_placeholder<_pX_<C...>> {
                 static const bool value = true;
                 template <typename V>
                 using convert = typename type_convert<C...>::template apply<V>; //convert
@@ -145,12 +145,12 @@ namespace mymd  {
 
     }   //detail_mbind
 
-    using detail_mbind::_X_;
-    using _x_ = detail_mbind::_X_<detail_mbind::no_cnv>;
-    using _xrr_ = detail_mbind::_X_<std::remove_reference>;
-    using _xrcv_ = detail_mbind::_X_<std::remove_cv>;
-    using _xrcvr_ = detail_mbind::_X_<std::remove_cv, std::remove_reference>;
-    using _xdecay_ = detail_mbind::_X_<std::decay>;
+    using detail_mbind::_pX_;
+    using _x_ = detail_mbind::_pX_<detail_mbind::no_cnv>;
+    using _xrr_ = detail_mbind::_pX_<std::remove_reference>;
+    using _xrcv_ = detail_mbind::_pX_<std::remove_cv>;
+    using _xrcvr_ = detail_mbind::_pX_<std::remove_cv, std::remove_reference>;
+    using _xdecay_ = detail_mbind::_pX_<std::decay>;
     
     template <template <typename...> class M, typename... binder>
     class mbind {
@@ -210,6 +210,6 @@ namespace mymd  {
         return typename detail_mbind::_x_supply<typename detail_mbind::mbind_not<mbind<M, B...>>>::type{};
     }
 
-}
+}   // mymd
 
 #endif
