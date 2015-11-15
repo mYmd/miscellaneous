@@ -11,6 +11,8 @@
 namespace mymd  {
 	namespace detail_mbind  {
         //-----------------------------------------------
+        template <typename...> struct packeR { };
+        //-----------------------------------------------
         //  default converter
         template <typename T>
             struct no_cnv  { using type = T; };
@@ -67,6 +69,11 @@ namespace mymd  {
         template <>
             struct count_placeholders<>
             { static const std::size_t value = 0; };
+
+        template <typename...T>
+            struct count_placeholders<packeR<T...>>
+            { static const std::size_t value = count_placeholders<T...>::value; };
+
         //-----------------------------------------------
         template <typename T>
             struct trap_placeholder {
@@ -81,8 +88,6 @@ namespace mymd  {
                 template <typename V>
                 using convert = typename type_convert<C...>::template apply<V>; //convert
             };
-        //-----------------------------------------------
-        template <typename...> struct packeR { };
         //-----------------------------------------------
         template <typename, typename, typename = packeR<>> struct employ_placeholder;
         
@@ -102,12 +107,6 @@ namespace mymd  {
         template <typename...T, typename...R>
             struct employ_placeholder<packeR<T...>, packeR<>, packeR<R...>>
             { using type = packeR<R..., T...>; };
-        //-----------------------------------------------
-        template <template <typename...> class, typename>   struct m_pack;
-
-        template <template <typename...> class M, typename...V>
-            struct m_pack<M, packeR<V...>>
-            { using type = M<V...>; };
         //-----------------------------------------------
         template <typename left, typename right>
             struct mbind_or {
@@ -137,6 +136,12 @@ namespace mymd  {
                     static constexpr bool value = !T::template apply<V...>::value;
                 };
             };
+        //-----------------------------------------------
+        template <template <typename...> class, typename>   struct unPack;
+
+        template <template <typename...> class M, typename...V>
+            struct unPack<M, packeR<V...>>
+            { using type = M<V...>; };
 
     }   //detail_mbind
 
@@ -151,10 +156,17 @@ namespace mymd  {
     class mbind {
         template <typename... V>
         using S = typename detail_mbind::employ_placeholder<detail_mbind::packeR<binder...>, detail_mbind::packeR<V...>>::type;
+        template <typename> struct rebind2;
+        template <typename... B> struct rebind2<detail_mbind::packeR<B...>>
+            {   using type = mbind<M, B...>;    };
     public:
         static const std::size_t n_placeholders = detail_mbind::count_placeholders<binder...>::value;
         template <typename... V>
-            using apply = typename detail_mbind::m_pack<M, S<V...>>::type;
+            using apply = typename std::conditional<
+                                            detail_mbind::count_placeholders<S<V...>>::value==0,
+                                            typename detail_mbind::unPack<M, S<V...>>::type,
+                                            typename rebind2<S<V...>>::type
+                                          >::type;
         template <typename... B>
             using bind = mbind<M, binder..., B...>;
         template <typename... B>
