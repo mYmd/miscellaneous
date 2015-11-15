@@ -8,12 +8,25 @@
 
 int main()
 {
-    using mymd::_x_;	using mymd::_xrr_;
-    using mymd::_xrcv_;
-    using type0 = mymd::mbind<std::tuple, char, _x_, int, _xrcv_, int>;
-    using type1 = type0::apply<std::string, const char>;
-    static_assert(std::is_same<type1, std::tuple<char, std::string, int, char, int>>::value, "!=");
-    //
+	using mymd::_x_;    // 型プレースホルダ
+    // 完成型：5要素のtuple
+    using tuple5 = std::tuple<char, std::string, int, char, int>;
+    // 最初に型を3つだけセット
+    using bind_3_5 = mymd::mbind<std::tuple, char, _x_, int, _x_, int>;
+    // 残り２つの型を埋める
+    {
+        using bind_5_5 = bind_3_5::apply<std::string, char>;
+        static_assert(std::is_same<bind_5_5, tuple5>::value, "!=");
+    }
+    // 残り２つの型をひとつずつ埋める
+    {
+        using mymd::_xrcv_;    // 型プレースホルダ（cv除去）
+        using bind_4_5 = bind_3_5::apply<std::string, _xrcv_>;
+        using bind_5_5 = bind_4_5::apply<const char>;
+        static_assert(std::is_same<bind_5_5, tuple5>::value, "!=");
+    }
+    // operator ||, operator &&, operator !
+    using mymd::_xrr_;
     using mymd::_xrcvr_;
     auto m1 = mymd::mbind<std::is_integral, _xrr_>{} || mymd::mbind<std::is_floating_point, _xrr_>{};
     auto m2 = !mymd::mbind<std::is_same, float, _xrr_>{};
