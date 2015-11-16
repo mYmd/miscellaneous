@@ -3,7 +3,11 @@ miscellaneous
 
 miscellaneous C++ files
 
-functor_overload.hpp  
+##### mbind.hpp  
+std::bind と同様なことをメタ関数などのテンプレートテンプレート名に対して行うもので、型を引数に取りコンパイル時に評価される式である。  
+http://mmyymmdd.hatenablog.com/entry/2015/11/15/225417  
+
+##### functor_overload.hpp  
 test_functor_overload.cpp(サンプル)  
 //***********************************************************************  
   オーバーロードされたファンクタを operator + を使ってその場で作る関数  
