@@ -38,14 +38,14 @@ namespace {
     auto WideCharToMultiByte_b(unsigned int codepage, std::wstring const& s, std::string& buf)
     {
         auto len = ::WideCharToMultiByte(codepage, 0, s.data(), -1, nullptr, 0, nullptr, nullptr);
-        buf.resize(len? len: 0, '\0');
+        buf.resize(len, '\0');
         return ::WideCharToMultiByte(codepage, 0, s.data(), -1, &buf[0], len, nullptr, nullptr) - 1;
     }
 
     auto MultiByteToWideChar_b(unsigned int codepage, std::string const& s, std::wstring& buf)
     {
         auto len = ::MultiByteToWideChar(codepage, 0, s.data(), -1, nullptr, 0);
-        buf.resize(len? len: 0, L'\0');
+        buf.resize(len, L'\0');
         return ::MultiByteToWideChar(codepage, 0, s.data(), -1, &buf[0], len) - 1;
     }
 
