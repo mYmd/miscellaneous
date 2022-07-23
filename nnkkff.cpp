@@ -1,4 +1,4 @@
-﻿// nnkkff.cpp
+// nnkkff.cpp
 //
 #include <windows.h>
 #include <tchar.h>
@@ -6,7 +6,7 @@
 #include <memory>
 
 namespace {
-    void nnkkff(std::wstring const& fileName_source, std::wstring const& fileName_target) noexcept;
+    int nnkkff(std::wstring const& fileName_source, std::wstring const& fileName_target) noexcept;
 }
 
 int _tmain(int argc, wchar_t *argv[])
@@ -23,7 +23,8 @@ int _tmain(int argc, wchar_t *argv[])
         std::cout << "対象ファイル名と出力ファイル名は異なっている必要があります" << std::endl;
         return 0;
     }
-    nnkkff(source, target);
+    auto size = nnkkff(source, target);
+    std::cout << "出力文字数:" << size << std::endl;
     return 0;
 }
 
@@ -34,43 +35,44 @@ namespace {
 
     using fileCloseRAII = std::unique_ptr<FILE, file_closer>;
 
-    void WideCharToMultiByte_b(unsigned int codepage, std::wstring const& s, std::string& buf)
-    {//MB_ERR_INVALID_CHARS
+    auto WideCharToMultiByte_b(unsigned int codepage, std::wstring const& s, std::string& buf)
+    {
         auto len = ::WideCharToMultiByte(codepage, 0, s.data(), -1, nullptr, 0, nullptr, nullptr);
-        buf.resize(len? len-1: 0, '\0');
-        len = ::WideCharToMultiByte(codepage, 0, s.data(), -1, &buf[0], len, nullptr, nullptr);
+        buf.resize(len? len: 0, '\0');
+        return ::WideCharToMultiByte(codepage, 0, s.data(), -1, &buf[0], len, nullptr, nullptr) - 1;
     }
 
-    void MultiByteToWideChar_b(unsigned int codepage, std::string const& s, std::wstring& buf)
+    auto MultiByteToWideChar_b(unsigned int codepage, std::string const& s, std::wstring& buf)
     {
         auto len = ::MultiByteToWideChar(codepage, 0, s.data(), -1, nullptr, 0);
-        buf.resize(len? len-1: 0, L'\0');
-        auto re = ::MultiByteToWideChar(codepage, 0, s.data(), -1, &buf[0], len);
+        buf.resize(len? len: 0, L'\0');
+        return ::MultiByteToWideChar(codepage, 0, s.data(), -1, &buf[0], len) - 1;
     }
 
-    void nnkkff(std::wstring const& fileName_source, std::wstring const& fileName_target) noexcept
+    int nnkkff(std::wstring const& fileName_source, std::wstring const& fileName_target) noexcept
     {
         FILE* fp_source = nullptr;
         if ( 0 != ::_wfopen_s(&fp_source, fileName_source.data(), L"rb") )   //
-            return;
+            return 0;
         fileCloseRAII fcr_source{fp_source};
         FILE* fp_target = nullptr;
         if ( 0 != ::_wfopen_s(&fp_target, fileName_target.data(), L"wb") )   //ANSI
-            return;
+            return 0;
         fileCloseRAII fcr_target{fp_target};
         std::string read_buf, out_buf;
         read_buf.resize(16384);
         out_buf.resize(256);
         std::wstring wide_buf;
         wide_buf.resize(256);
+        int size{0};
         while (true)
         {
             if (!std::fgets(&read_buf[0], static_cast<int>(read_buf.capacity()), fp_source)) break;
             MultiByteToWideChar_b(CP_ACP, read_buf, wide_buf);
-            WideCharToMultiByte_b(CP_UTF8, wide_buf, out_buf);
+            size += WideCharToMultiByte_b(CP_UTF8, wide_buf, out_buf);
             auto b = std::fputs(out_buf.data(), fp_target);
         }
-        return;
+        return size;
     }
 }
 
