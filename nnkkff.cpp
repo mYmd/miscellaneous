@@ -65,9 +65,8 @@ namespace {
         std::wstring wide_buf;
         wide_buf.resize(256);
         int size{0};
-        while (true)
+        while (std::fgets(&read_buf[0], static_cast<int>(read_buf.capacity()), fp_source))
         {
-            if (!std::fgets(&read_buf[0], static_cast<int>(read_buf.capacity()), fp_source)) break;
             MultiByteToWideChar_b(CP_ACP, read_buf, wide_buf);
             size += WideCharToMultiByte_b(CP_UTF8, wide_buf, out_buf);
             auto b = std::fputs(out_buf.data(), fp_target);
