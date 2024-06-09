@@ -5,13 +5,14 @@
 #$scripter = New-Object Microsoft.SqlServer.Management.Smo.Scripter($server)
 # オプションの確認
 #$scripter.Options | Format-List
-#.\GenerateTableScript.ps1 -serverName "" -databaseName "" -schemaName "" -tableName ""
+#.\GenerateTableScript.ps1 -serverName "" -databaseName "" -schemaName "" -entityName "" -is_table $true
 
 param (
-    [string]$serverName = "localhost",  # サーバー名
-    [string]$databaseName = "YourDatabase",  # データベース名
-    [string]$schemaName = "dbo",  # スキーマ名
-    [string]$tableName = "YourTable"  # テーブル名
+    [string]$serverName,  # サーバー名
+    [string]$databaseName,  # データベース名
+    [string]$schemaName,  # スキーマ名
+    [string]$entityName,  # テーブル名
+    [bool]$is_table
 )
 
 # SQL Server SMOのロード
@@ -22,19 +23,27 @@ $server = New-Object Microsoft.SqlServer.Management.Smo.Server $serverName
 $database = $server.Databases[$databaseName]
 
 # テーブルの取得
-$table = $database.Tables[$tableName, $schemaName]
-
+if ($is_table)
+{
+	$entity = $database.Tables[$entityName, $schemaName]
+}
+else
+{
+	$entity = $database.StoredProcedures[$entityName, $schemaName]
+}
 # スクリプトオプションの設定
 $scrp = New-Object Microsoft.SqlServer.Management.Smo.Scripter ($server)
-$scrp.Options.ScriptDrops = $false
+$scrp.Options.DriAll  = $true
+<#
+#$scrp.Options.ScriptDrops = $true
 $scrp.Options.WithDependencies = $false
 $scrp.Options.Indexes = $true
 $scrp.Options.DriAllConstraints = $true
 $scrp.Options.Triggers = $true
 $scrp.Options.NoCollation = $false  # 照合順序を含める
-
+#>
 # スクリプトの生成
-$script = $scrp.Script($table)
+$script = $scrp.Script($entity)
 $scriptText = $script -join "`n"
 
 # スクリプトの出力
