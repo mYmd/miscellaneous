@@ -11,7 +11,73 @@ from azure.storage.filedatalake import (
 
 from azure.storage.blob import ContainerClient
 from azure.storage.blob import BlobClient
+from azure.core.exceptions import ClientAuthenticationError
 from azure.storage.blob import BlobServiceClient
+
+
+#https://learn.microsoft.com/en-us/python/api/azure-storage-blob/azure.storage.blob.blobclient?view=azure-python#azure-storage-blob-blobclient-upload-blob
+class CsvUploader:
+    def __init__(self):
+        self.stream_ = io.StringIO(newline='')
+        self.csv = csv.writer(self.stream_, dialect=csv.excel_tab)
+        self.message = ''
+    def clear(self):
+        self.stream_.truncate(0)
+        self.stream_.seek(0)
+        self.message = ''
+    def upload(self, full_sas: str, encoding: str='UTF-8', errors: str='strict', clear: bool=True)->bool:
+        self.message = ''
+        try:
+            blob_client = BlobClient.from_blob_url(full_sas)
+            exists = blob_client.exists()
+            if exists and blob_client.get_blob_properties().blob_type != 'BlockBlob':
+                self.message = 'エラー:既存ファイルを上書きuploadをするときBlockタイプは"BlockBlob"でなければなりません'
+                return False
+            self.stream_.seek(0)
+            value = self.stream_.getvalue().encode(encoding, errors)
+            datalen = len(value)
+            blob_client.upload_blob(value, overwrite=True)
+            if clear:
+                self.clear()
+            m0 = '既存' if exists else '新規'
+            m1 = '上書き' if exists else ''
+            self.message = f'成功:{m0}ファイルへの{m1}upload({datalen} bytes)'
+            return True
+        except ClientAuthenticationError as e:
+            self.message = 'エラー:例外発生/権限不足もしくは認証エラー'
+            return False
+        except:
+            self.message = 'エラー:例外発生/原因不明'
+            return False
+        finally:
+            self.stream_.seek(0, io.SEEK_END)
+    def append(self, full_sas: str, encoding: str='UTF-8', errors: str='strict', clear: bool=True)->bool:
+        self.message = ''
+        try:
+            blob_client = BlobClient.from_blob_url(full_sas)
+            exists = blob_client.exists()
+            if not exists:
+                blob_client.create_append_blob()
+            elif blob_client.get_blob_properties().blob_type != 'AppendBlob':
+                self.message = 'エラー:既存ファイルにappendするときBlockタイプは"AppendBlob"でなければなりません'
+                return False
+            self.stream_.seek(0)
+            value = self.stream_.getvalue().encode(encoding, errors)
+            datalen = len(value)
+            if datalen:
+                blob_client.append_block(value)
+            if clear:
+                self.clear()
+            self.message = f'成功:{"既存" if exists else "新規"}ファイルへのappend({datalen} bytes)'
+            return True
+        except ClientAuthenticationError as e:
+            self.message = 'エラー:例外発生/権限不足もしくは認証エラー'
+            return False
+        except:
+            self.message = 'エラー:例外発生/原因不明'
+            return False
+        finally:
+            self.stream_.seek(0, io.SEEK_END)
 
 
 class Strorage_Account:
