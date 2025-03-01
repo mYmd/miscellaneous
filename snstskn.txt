@@ -1,1 +1,12 @@
+'''Powershellでは先に
+[Console]::OutputEncoding=[Text.Encoding]::UTF8
+[Console]::InputEncoding=[Text.Encoding]::UTF8
+$OutputEncoding=[Text.Encoding]::UTF8
+をやっておく'''
 
+cocp = ctypes.windll.kernel32.GetConsoleOutputCP()
+ccp = ctypes.windll.kernel32.GetConsoleCP()
+if cocp!=65001 or ccp!=65001:
+    print('環境がUnicodeになっていません。プログラムを終了します', file=sys.stderr)
+sys.stdin.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8')
