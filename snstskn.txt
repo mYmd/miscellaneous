@@ -1,7 +1,8 @@
 '''Powershellでは先に
+$PSDefaultParameterValues['*:Encoding']='utf8'
+$OutputEncoding=[Text.Encoding]::UTF8
 [Console]::OutputEncoding=[Text.Encoding]::UTF8
 [Console]::InputEncoding=[Text.Encoding]::UTF8
-$OutputEncoding=[Text.Encoding]::UTF8
 をやっておく'''
 
 cocp = ctypes.windll.kernel32.GetConsoleOutputCP()
