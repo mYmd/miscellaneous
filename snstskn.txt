@@ -11,3 +11,34 @@ if cocp!=65001 or ccp!=65001:
     print('環境がUnicodeになっていません。プログラムを終了します', file=sys.stderr)
 sys.stdin.reconfigure(encoding='utf-8')
 sys.stdout.reconfigure(encoding='utf-8')
+
+CREATE FUNCTION utility.JsonVectorTable(@JsonText NVARCHAR(max))
+RETURNS TABLE
+AS
+RETURN
+(
+	WITH AAA AS (
+		SELECT value FROM OPENJSON(@JsonText)
+	)
+	SELECT 
+	JSON_VALUE(value, '$[0]') AS CL001,
+	JSON_VALUE(value, '$[1]') AS CL002,
+	JSON_VALUE(value, '$[2]') AS CL003,
+	JSON_VALUE(value, '$[3]') AS CL004,
+	JSON_VALUE(value, '$[4]') AS CL005,
+	JSON_VALUE(value, '$[5]') AS CL006,
+	JSON_VALUE(value, '$[6]') AS CL007,
+	JSON_VALUE(value, '$[7]') AS CL008,
+	JSON_VALUE(value, '$[8]') AS CL009,
+	JSON_VALUE(value, '$[9]') AS CL010,
+	JSON_VALUE(value, '$[10]') AS CL011,
+	JSON_VALUE(value, '$[11]') AS CL012,
+	JSON_VALUE(value, '$[12]') AS CL013,
+	JSON_VALUE(value, '$[13]') AS CL014,
+	JSON_VALUE(value, '$[14]') AS CL015
+	FROM AAA
+);
+GO
+
+SELECT * FROM utility.JsonVectorTable(
+N'[["BWV 140 & 147/Harnoncourt","J.S.Bach Cantatas BWV 140 & 147","Wachet auf, ruft uns die Stimme","","1984","","J.S.Bach(Cantata)","17","01:00:12"],["後宮からの/Christie","後宮からの誘拐 K.384","William Christie/Les Arts Florissants","Jürg Löw, Alan Ewing, Sophie Lamotte d''Argy, Iain Paton, William Christie, Ian Bostridge, Christine Schäfer, Patricia Petibon","1997","W.A.Mozart","Opera","39","02:06:39"]]')
