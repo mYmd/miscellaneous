@@ -69,3 +69,28 @@ PIVOT (
     集約関数(<集約対象列>)
     FOR <ピボット列> IN (<ピボット列の値リスト>)
 ) AS ピボットテーブル;
+
+--------------------------------------------
+;WITH SRC AS (
+	SELECT F2,
+	ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS [key]
+	FROM [dbo].Table03
+), SRC2 AS (
+	SELECT	SRC.[key],
+			SS.ordinal,
+			SS.value
+	FROM SRC
+	CROSS APPLY (
+		SELECT ordinal, value FROM STRING_SPLIT(SRC.F2,',',1)
+	) AS SS
+)
+SELECT T.[key], VLS.*
+FROM (SELECT [key] FROM SRC) AS T
+CROSS APPLY (
+	SELECT [1],[2],[3],[4],[5],[6],[7]
+	FROM SRC2
+	PIVOT (
+		MAX(value) FOR ordinal IN ([1],[2],[3],[4],[5],[6],[7])
+	) AS PV
+	WHERE [key]=T.[key]
+) AS VLS
