@@ -58,3 +58,14 @@ SELECT * FROM SplitCTE;
 
 SELECT * FROM utility.JsonVectorTable(
 N'[["BWV 140 & 147/Harnoncourt","J.S.Bach Cantatas BWV 140 & 147","Wachet auf, ruft uns die Stimme","","1984","","J.S.Bach(Cantata)","17","01:00:12"],["後宮からの/Christie","後宮からの誘拐 K.384","William Christie/Les Arts Florissants","Jürg Löw, Alan Ewing, Sophie Lamotte d''Argy, Iain Paton, William Christie, Ian Bostridge, Christine Schäfer, Patricia Petibon","1997","W.A.Mozart","Opera","39","02:06:39"]]')
+
+基本的な PIVOT の構文
+SELECT <列1>, <列2>, ..., <ピボット列の値> 
+FROM 
+(
+    <元のクエリ>
+) AS ソーステーブル
+PIVOT (
+    集約関数(<集約対象列>)
+    FOR <ピボット列> IN (<ピボット列の値リスト>)
+) AS ピボットテーブル;
