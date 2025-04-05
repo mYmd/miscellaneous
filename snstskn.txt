@@ -94,3 +94,56 @@ CROSS APPLY (
 	) AS PV
 	WHERE [key]=T.[key]
 ) AS VLS
+--------------------------------------
+CREATE FUNCTION [utility].[csv_extension] 
+(
+	@table_name nvarchar(128),
+	@target_column nvarchar(128),
+	@mumber_of_items int,
+	@fieldterminator nvarchar(4),
+	@key_column nvarchar(128),
+	@where_clause nvarchar(128)
+)
+RETURNS nvarchar(max)
+AS
+BEGIN
+	SET @key_column = COALESCE(@key_column, N'ROW_NUMBER() OVER (ORDER BY (SELECT NULL))')
+	SET @where_clause = COALESCE(@where_clause, N'1=1')
+
+	DECLARE @enum_expr nvarchar(max);
+
+	WITH AAA AS (
+		SELECT TOP(@mumber_of_items)
+		ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS rn
+		FROM sys.all_objects
+	)
+	SELECT @enum_expr = CONCAT(N'[', STRING_AGG(rn, N'],[') WITHIN GROUP (ORDER BY rn ASC), N']')
+	FROM AAA
+	
+	DECLARE @expr nvarchar(max) =
+	CONCAT('WITH SRC AS (', CHAR(10),
+	'    SELECT ', @target_column, ' AS tgt,', CHAR(10),
+	'    ', @key_column, ' AS [key]', CHAR(10),
+	'    FROM ', @table_name, CHAR(10),
+	'    WHERE ', @where_clause, CHAR(10),
+	'), SRC2 AS (', CHAR(10),
+	'    SELECT SRC.[key], SS.ordinal, SS.value', CHAR(10),
+	'    FROM SRC', CHAR(10),
+	'    CROSS APPLY (', CHAR(10),
+	'        SELECT ordinal, value FROM STRING_SPLIT(SRC.tgt,''', @fieldterminator, ''',1)', CHAR(10),
+	'    ) AS SS', CHAR(10),
+	')', CHAR(10),
+	'SELECT T.[key], VLS.*', CHAR(10),
+	'FROM (SELECT [key] FROM SRC) AS T', CHAR(10),
+	'CROSS APPLY (', CHAR(10),
+	'    SELECT ', @enum_expr, CHAR(10),
+	'    FROM SRC2', CHAR(10),
+	'    PIVOT (', CHAR(10),
+	'        MAX(value) FOR ordinal IN (', @enum_expr, ')', CHAR(10),
+	'    ) AS PV', CHAR(10),
+	'    WHERE [key]=T.[key]', CHAR(10),
+	') AS VLS', CHAR(10),
+	'ORDER BY 1');
+
+	RETURN @expr
+END
