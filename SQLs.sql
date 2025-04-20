@@ -132,3 +132,43 @@ BEGIN
 
 	RETURN @expr
 END
+######################################################################
+CREATE TABLE json.table00(
+	value nvarchar(max)
+)
+
+CREATE TABLE json.table_vec(
+	num int,
+	value nvarchar(max)
+)
+-----------------------------------
+TRUNCATE TABLE json.table_vec;
+
+INSERT INTO json.table_vec
+SELECT CA.[key], CA.[value]
+FROM json.table00 AS T
+CROSS APPLY (
+	SELECT [key], [value] FROM OPENJSON(T.value)
+) AS CA;
+-----------------------------------
+SELECT T0.num,CA.[key],CA.[value]
+FROM json.table_vec AS T0
+CROSS APPLY (
+	SELECT * FROM OPENJSON(T0.value, '$.person')
+	WHERE [key] IN ('lastName','firstName')
+) AS CA;
+-----------------------------------
+WITH SRC AS (
+	SELECT T0.num,CA.[key],CA.[value]
+	FROM json.table_vec AS T0
+	CROSS APPLY (
+		SELECT * FROM OPENJSON(T0.value, '$.person')
+		WHERE [key] IN ('lastName','firstName')
+	) AS CA
+)
+SELECT num,PV.[firstName],PV.[lastName]
+FROM SRC
+PIVOT (
+	MAX(value) FOR [key] IN ([firstName],[lastName])
+) AS PV
+######################################################################
