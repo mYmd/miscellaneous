@@ -172,3 +172,12 @@ PIVOT (
 	MAX(value) FOR [key] IN ([firstName],[lastName])
 ) AS PV
 ######################################################################
+if isinstance(obj, pyodbc.Row):
+  return dict(zip(range(len(obj)),obj))
+
+SELECT * FROM OPENJSON(@expr)
+WITH (
+  [0] nvarchar(50),
+  [1] date,
+  [2] date
+)
