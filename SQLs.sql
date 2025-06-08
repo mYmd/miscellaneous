@@ -173,11 +173,15 @@ PIVOT (
 ) AS PV
 ######################################################################
 if isinstance(obj, pyodbc.Row):
-  return dict(zip(range(len(obj)),obj))
+  return dict(zip(range(1, len(obj)+1), obj))
 
 SELECT * FROM OPENJSON(@expr)
 WITH (
-  [0] nvarchar(50),
-  [1] date,
-  [2] date
+  [1] nvarchar(50),
+  [2] date,
+  [3] date
 )
+----------
+SELECT TABLE_NAME,ORDINAL_POSITION,COLUMN_NAME,DATA_TYPE,CHARACTER_MAXIMUM_LENGTH,NUMERIC_PRECISION,NUMERIC_SCALE,DATETIME_PRECISION
+ FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME='Table02'
