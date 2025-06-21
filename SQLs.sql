@@ -172,8 +172,21 @@ PIVOT (
 	MAX(value) FOR [key] IN ([firstName],[lastName])
 ) AS PV
 ######################################################################
-if isinstance(obj, pyodbc.Row):
-  return dict(zip(range(1, len(obj)+1), obj))
+class myConverter(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, pyodbc.Row):
+            return dict(enumerate(obj, start=1))
+        elif isinstance(obj, datetime.datetime):
+            return obj.strftime("%Y-%m-%d, %H:%M:%S")
+        elif isinstance(obj, datetime.date):
+            return obj.strftime("%Y-%m-%d")
+        elif isinstance(obj, datetime.time):
+            return obj.strftime("%H:%M:%S")
+        elif isinstance(obj, decimal.Decimal):
+            return format(obj.normalize(), 'f')
+        else:
+            return super().default(obj)
+
 
 SELECT * FROM OPENJSON(@expr)
 WITH (
