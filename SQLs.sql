@@ -212,21 +212,25 @@ CROSS APPLY (
 ) AS T
 
 ---------------------------------------------------
-ALTER PROCEDURE [dbo].[try_truncate]
-	@target		nvarchar(64),
-	@wait		time(0),
-	@retrycount int
+CREATE PROCEDURE [utility].[try_truncate]
+	@truncate_target		nvarchar(64),
+	@lock_timeout_millisec	int,
+	@wait					time(0),
+	@retrycount				int
 AS
 BEGIN
 	SET NOCOUNT ON;
-	DECLARE @truncate_stmt nvarchar(128)=CONCAT(N'TRUNCATE TABLE ', @target)
+	DECLARE @truncate_stmt nvarchar(128)=CONCAT(N'TRUNCATE TABLE ', @truncate_target)
 	DECLARE @wait_stmt nvarchar(64)=CONCAT(N'WAITFOR DELAY ''', @wait, '''')
+	DECLARE @timeout_stmt nvarchar(64)=CONCAT('SET LOCK_TIMEOUT ', @lock_timeout_millisec)
+
 	DECLARE @success BIT=0;
 
+	PRINT @timeout_stmt
 	PRINT @truncate_stmt
 	PRINT @wait_stmt
 
-	SET LOCK_TIMEOUT 2000;
+	EXECUTE sp_executesql @timeout_stmt
 	WHILE 0<@retrycount AND @success=0
 	BEGIN
 		BEGIN TRANSACTION
