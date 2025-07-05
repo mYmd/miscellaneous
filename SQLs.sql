@@ -280,7 +280,7 @@ BEGIN
 	
 	PRINT @stmt
 	DECLARE @ParmDefinition AS nvarchar(512)= N'@resultOUT int OUTPUT';
-	DECLARE @result int;
+	DECLARE @result int=0;
 
 	execute sp_executesql @stmt, @ParmDefinition, @resultOUT=@result OUTPUT;
 
