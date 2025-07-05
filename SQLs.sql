@@ -246,3 +246,46 @@ BEGIN
 
 	RETURN @success
 END
+----------------------------------------------
+CREATE PROCEDURE [utility].[try_truncate_and]
+	@truncate_target		nvarchar(64),
+	@lock_timeout_millisec	int,
+	@todelete				bit,
+	@select_out				bit=0
+AS
+BEGIN
+	SET NOCOUNT ON;
+	DECLARE @stmt nvarchar(1024) = CONCAT(N'SET LOCK_TIMEOUT ', @lock_timeout_millisec, CHAR(10))
+	SET @stmt = CONCAT(@stmt, N'SET @resultOUT=0', CHAR(10))
+	SET @stmt = CONCAT(@stmt, N'BEGIN TRY', CHAR(10))
+	SET @stmt = CONCAT(@stmt, N'  TRUNCATE TABLE ', @truncate_target, CHAR(10))
+	SET @stmt = CONCAT(@stmt, N'  SET @resultOUT=2', CHAR(10))
+	SET @stmt = CONCAT(@stmt, N'END TRY', CHAR(10))
+	SET @stmt = CONCAT(@stmt, N'BEGIN CATCH', CHAR(10))
+	IF @todelete=1
+		BEGIN
+			SET @stmt = CONCAT(@stmt, N'  BEGIN TRY', CHAR(10))
+			SET @stmt = CONCAT(@stmt, N'    DELETE FROM ', @truncate_target, CHAR(10))
+			SET @stmt = CONCAT(@stmt, N'    SET @resultOUT=1', CHAR(10))
+			SET @stmt = CONCAT(@stmt, N'  END TRY', CHAR(10))
+			SET @stmt = CONCAT(@stmt, N'  BEGIN CATCH', CHAR(10))
+			SET @stmt = CONCAT(@stmt, N'    SET @resultOUT=0', CHAR(10))
+			SET @stmt = CONCAT(@stmt, N'  END CATCH', CHAR(10))
+		END
+	ELSE
+		BEGIN
+			SET @stmt = CONCAT(@stmt, N'  SET @resultOUT=0', CHAR(10))
+		END
+	SET @stmt = CONCAT(@stmt, N'END CATCH', CHAR(10))
+	
+	PRINT @stmt
+	DECLARE @ParmDefinition AS nvarchar(512)= N'@resultOUT int OUTPUT';
+	DECLARE @result int;
+
+	execute sp_executesql @stmt, @ParmDefinition, @resultOUT=@result OUTPUT;
+
+	IF @select_out=1	
+	SELECT CASE WHEN @result=2 THEN 'truncated' WHEN @result=1 THEN 'deleted' ELSE 'failed' END
+	
+	RETURN @result   /*  0=failed, 1=deleted, 2=truncated  */
+END
