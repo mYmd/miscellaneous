@@ -214,7 +214,6 @@ CROSS APPLY (
 ---------------------------------------------------
 CREATE PROCEDURE [utility].[try_truncate]
 	@truncate_target		nvarchar(64),
-	@lock_timeout_millisec	int,
 	@wait					time(0),
 	@retrycount				int
 AS
@@ -222,41 +221,28 @@ BEGIN
 	SET NOCOUNT ON;
 	DECLARE @truncate_stmt nvarchar(128)=CONCAT(N'TRUNCATE TABLE ', @truncate_target)
 	DECLARE @wait_stmt nvarchar(64)=CONCAT(N'WAITFOR DELAY ''', @wait, '''')
-	DECLARE @timeout_stmt nvarchar(64)=CONCAT('SET LOCK_TIMEOUT ', @lock_timeout_millisec)
 
 	DECLARE @success BIT=0;
 
-	PRINT @timeout_stmt
-	PRINT @truncate_stmt
-	PRINT @wait_stmt
+	IF @@LOCK_TIMEOUT<0
+	BEGIN
+		PRINT 'SET LOCK_TIMEOUT 1000'
+		SET LOCK_TIMEOUT 1000	--これはどうしても動的にできない
+	END
 
-	EXECUTE sp_executesql @timeout_stmt
 	WHILE 0<@retrycount AND @success=0
 	BEGIN
-		BEGIN TRANSACTION
 		BEGIN TRY
-			EXECUTE sp_executesql @truncate_stmt
-			COMMIT TRANSACTION
+			EXECUTE(@truncate_stmt)
 			SET @success=1
 			PRINT 'TRUNCATEされました'
 		END TRY
 		BEGIN CATCH
-			IF XACT_STATE() != 0
-			BEGIN
-				ROLLBACK TRANSACTION;
-				PRINT 'ROLLBACKされました'
-			END
 			PRINT CONCAT(@retrycount, ': ちょっと待ちます')
 			SET @retrycount -= 1;
-			EXECUTE sp_executesql @wait_stmt
+			EXECUTE(@wait_stmt)
 		END CATCH
 	END
 
-	IF @success=0
-	BEGIN
-		PRINT '諦めました'
-		RETURN
-	END
-	
-	PRINT '最後'
+	RETURN @success
 END
