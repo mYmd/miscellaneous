@@ -255,7 +255,7 @@ CREATE PROCEDURE [utility].[try_truncate_and]
 AS
 BEGIN
 	SET NOCOUNT ON;
-	DECLARE @stmt nvarchar(1024) = CONCAT(N'SET LOCK_TIMEOUT ', @lock_timeout_millisec, CHAR(10))
+	DECLARE @stmt nvarchar(512) = CONCAT(N'SET LOCK_TIMEOUT ', @lock_timeout_millisec, CHAR(10))
 	SET @stmt = CONCAT(@stmt, N'SET @resultOUT=0', CHAR(10))
 	SET @stmt = CONCAT(@stmt, N'BEGIN TRY', CHAR(10))
 	SET @stmt = CONCAT(@stmt, N'  TRUNCATE TABLE ', @truncate_target, CHAR(10))
@@ -279,7 +279,7 @@ BEGIN
 	SET @stmt = CONCAT(@stmt, N'END CATCH', CHAR(10))
 	
 	PRINT @stmt
-	DECLARE @ParmDefinition AS nvarchar(512)= N'@resultOUT int OUTPUT';
+	DECLARE @ParmDefinition AS nvarchar(32)= N'@resultOUT int OUTPUT';
 	DECLARE @result int=0;
 
 	execute sp_executesql @stmt, @ParmDefinition, @resultOUT=@result OUTPUT;
